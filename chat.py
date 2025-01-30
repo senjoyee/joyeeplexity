@@ -128,9 +128,31 @@ def extract_citations(text):
     # Find all citations in the format [number] Title URL
     citations = []
     lines = text.split('\n')
+    
+    # Debug: Print the text we're processing
+    st.write("Debug - Processing text:", text)
+    
+    in_sources_section = False
     for line in lines:
-        if re.match(r'\[\d+\]', line):
-            citations.append(line.strip())
+        line = line.strip()
+        
+        # Check if we're entering the sources section
+        if line.lower().startswith('sources:'):
+            in_sources_section = True
+            continue
+            
+        # If we're in the sources section and line starts with [number], it's a citation
+        if in_sources_section and re.match(r'^\[\d+\]', line):
+            citations.append(line)
+            
+        # Also catch any inline citations in the format [1] URL
+        elif '[' in line and ']' in line:
+            matches = re.findall(r'\[(\d+)\]\s*(http[^\s\]]+)', line)
+            for num, url in matches:
+                citations.append(f'[{num}] {url}')
+    
+    # Debug: Print found citations
+    st.write("Debug - Found citations:", citations)
     
     return citations
 
@@ -186,13 +208,25 @@ if st.session_state.submitted_query:
     response = get_ai_response_stream(query, response_placeholder)
     
     if response:
-        # Extract citations after response is complete
+        # Extract all citations
         citations = extract_citations(response)
+        
+        # Clean response by removing the sources section
+        response_lines = []
+        in_sources = False
+        for line in response.split('\n'):
+            if line.lower().strip().startswith('sources:'):
+                in_sources = True
+                continue
+            if not in_sources:
+                response_lines.append(line)
+        
+        cleaned_response = '\n'.join(response_lines).strip()
         
         # Add to conversation history
         st.session_state.conversations.append({
             "query": query,
-            "response": response,
+            "response": cleaned_response,
             "citations": citations
         })
         
