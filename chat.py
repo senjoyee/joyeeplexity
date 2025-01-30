@@ -176,6 +176,9 @@ if st.session_state.show_search:
 if st.session_state.submitted_query:
     query = st.session_state.submitted_query
     
+    # Display the question first
+    st.markdown(f"### Q: {query}")
+    
     # Create placeholder for streaming response
     response_placeholder = st.empty()
     
