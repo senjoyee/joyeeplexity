@@ -48,6 +48,8 @@ if 'selected_model' not in st.session_state:
     st.session_state.selected_model = "sonar"
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
+if 'show_search' not in st.session_state:
+    st.session_state.show_search = True
 
 # Sidebar for model selection
 with st.sidebar:
@@ -155,14 +157,24 @@ st.title("Perplexity-like Chat")
 for conv in st.session_state.conversations:
     display_conversation(conv["query"], conv["response"], conv["citations"])
 
-# Search form without floating container
-with st.form(key="search_form", clear_on_submit=True):
-    query = st.text_input("Ask anything...", key=f"search_input_{st.session_state.input_key}")
-    submit_button = st.form_submit_button("Send", use_container_width=True)
+# Handle form submission through session state
+if 'submitted_query' not in st.session_state:
+    st.session_state.submitted_query = None
 
-if submit_button and query:
-    # Increment the input key to reset the input field
-    st.session_state.input_key += 1
+# Search form without floating container
+if st.session_state.show_search:
+    with st.form(key="search_form", clear_on_submit=True):
+        query = st.text_input("Ask anything...", key=f"search_input_{st.session_state.input_key}")
+        submit_button = st.form_submit_button("Send", use_container_width=True)
+        
+        if submit_button and query:
+            st.session_state.submitted_query = query
+            st.session_state.show_search = False
+            st.rerun()
+
+# Handle query processing
+if st.session_state.submitted_query:
+    query = st.session_state.submitted_query
     
     # Create placeholder for streaming response
     response_placeholder = st.empty()
@@ -181,5 +193,8 @@ if submit_button and query:
             "citations": citations
         })
         
-        # Rerun to update the display
+        # Reset for next query
+        st.session_state.submitted_query = None
+        st.session_state.show_search = True
+        st.session_state.input_key += 1
         st.rerun()
